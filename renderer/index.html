@@ -3,28 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Markdown Reader</title>
+  <title>BKit - Brand Kit Workspace</title>
   <link rel="stylesheet" href="styles.css">
-  <!-- Highlight.js for syntax highlighting -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-light">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-dark" disabled>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-  <!-- Marked for markdown parsing -->
   <script src="https://cdn.jsdelivr.net/npm/marked@11.1.0/marked.min.js"></script>
-  <!-- DOMPurify for XSS protection -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
 </head>
 <body>
   <div class="app-container">
     <header class="app-header">
       <div class="header-content">
-        <h1 class="app-title">Markdown Reader</h1>
+        <h1 class="app-title">
+          <span class="logo">BKit</span>
+          <span class="workspace-name" id="workspaceName"></span>
+        </h1>
         <div class="header-controls">
-          <button id="openFileBtn" class="btn btn-primary">
+          <button id="newWorkspaceBtn" class="btn btn-secondary" title="New Workspace">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M2 3.5C2 2.67157 2.67157 2 3.5 2H6.5C6.89782 2 7.27936 2.15804 7.56066 2.43934L8.5 3.37868C8.78130 3.65998 9.16284 3.81802 9.56066 3.81802H12.5C13.3284 3.81802 14 4.48959 14 5.31802V12.5C14 13.3284 13.3284 14 12.5 14H3.5C2.67157 14 2 13.3284 2 12.5V3.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
             </svg>
-            Open File
+            New
+          </button>
+          <button id="openWorkspaceBtn" class="btn btn-secondary" title="Open Workspace">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M2 3.5C2 2.67157 2.67157 2 3.5 2H6.5L8.5 3.81802H12.5C13.3284 3.81802 14 4.48959 14 5.31802V12.5C14 13.3284 13.3284 14 12.5 14H3.5C2.67157 14 2 13.3284 2 12.5V3.5Z" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+            Open
+          </button>
+          <button id="openFileBtn" class="btn btn-secondary" title="Open Single File">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M9 1H3.5C2.67157 1 2 1.67157 2 2.5V13.5C2 14.3284 2.67157 15 3.5 15H12.5C13.3284 15 14 14.3284 14 13.5V5M9 1L14 5M9 1V4.5C9 4.77614 9.22386 5 9.5 5H14" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+            File
+          </button>
+          <div class="separator"></div>
+          <button id="searchBtn" class="btn btn-icon" title="Search workspace">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M12.5 12.5L16.5 16.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button id="exportBtn" class="btn btn-icon" title="Export AI Context" disabled>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M10 3V12M10 12L7 9M10 12L13 9M4 17H16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
           </button>
           <button id="themeToggle" class="btn btn-icon" title="Toggle theme">
             <svg class="theme-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -36,40 +60,121 @@
     </header>
 
     <div class="main-layout">
+      <!-- Sidebar -->
       <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-          <h2>Contents</h2>
+        <div class="sidebar-tabs">
+          <button class="sidebar-tab active" data-tab="files">Files</button>
+          <button class="sidebar-tab" data-tab="backlinks">Backlinks</button>
         </div>
-        <nav class="toc" id="tableOfContents">
-          <p class="toc-empty">Open a Markdown file to see the table of contents</p>
-        </nav>
+        
+        <div class="sidebar-panel" id="filesPanel">
+          <div class="file-tree" id="fileTree"></div>
+        </div>
+        
+        <div class="sidebar-panel" id="backlinksPanel" style="display: none;">
+          <div class="backlinks-container" id="backlinksContainer">
+            <p class="empty-state">Open a file to see backlinks</p>
+          </div>
+        </div>
       </aside>
 
+      <!-- Search Panel (hidden by default) -->
+      <div class="search-overlay" id="searchOverlay" style="display: none;"></div>
+
+      <!-- Main Content -->
       <main class="content-area">
-        <div id="dropZone" class="drop-zone">
-          <div class="drop-zone-content">
-            <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-              <path d="M32 8V24M32 24L24 16M32 24L40 16M16 32H8M56 32H48M44 44L48 48M20 20L16 16M44 20L48 16M20 44L16 48" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="32" cy="32" r="20" stroke="currentColor" stroke-width="2"/>
-            </svg>
-            <h2>Drop a Markdown file here</h2>
-            <p>or</p>
-            <button id="dropZoneBtn" class="btn btn-large">Choose File</button>
-            <p class="drop-zone-hint">Supports .md and .markdown files</p>
+        <!-- Welcome Screen -->
+        <div id="welcomeScreen" class="welcome-screen">
+          <div class="welcome-content">
+            <div class="welcome-logo">
+              <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+                <rect x="10" y="10" width="60" height="60" rx="8" stroke="currentColor" stroke-width="2"/>
+                <path d="M25 35H55M25 45H45" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h2>Welcome to BKit</h2>
+            <p>Markdown-native Brand Kit workspace</p>
+            <div class="welcome-actions">
+              <button id="welcomeNewBtn" class="btn btn-large btn-primary">
+                Create New Workspace
+              </button>
+              <button id="welcomeOpenBtn" class="btn btn-large">
+                Open Existing Workspace
+              </button>
+              <button id="welcomeFileBtn" class="btn btn-large">
+                Open Single File
+              </button>
+            </div>
+            <div class="welcome-features">
+              <div class="feature">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span>Local-first & Git-friendly</span>
+              </div>
+              <div class="feature">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M13 7L9 12L13 17M11 12H21M3 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span>Internal linking & backlinks</span>
+              </div>
+              <div class="feature">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                  <path d="M17 17L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span>Fast workspace search</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <article id="markdownContent" class="markdown-content" style="display: none;">
-          <div class="document-header">
-            <h1 id="documentTitle" class="document-title"></h1>
-            <p id="documentPath" class="document-path"></p>
+        <!-- Editor/Viewer -->
+        <div id="documentContainer" class="document-container" style="display: none;">
+          <div class="document-toolbar">
+            <div class="document-info">
+              <h1 id="documentTitle" class="document-title-small"></h1>
+              <p id="documentPath" class="document-path-small"></p>
+            </div>
+            <div class="view-controls">
+              <div class="view-mode-switcher">
+                <button class="view-mode-btn active" data-mode="read">Read</button>
+                <button class="view-mode-btn" data-mode="edit">Edit</button>
+                <button class="view-mode-btn" data-mode="split">Split</button>
+              </div>
+            </div>
           </div>
-          <div id="renderedMarkdown" class="rendered-markdown"></div>
-        </article>
+
+          <div class="document-views">
+            <!-- Read View -->
+            <article id="readView" class="view-panel read-view">
+              <div id="renderedMarkdown" class="rendered-markdown"></div>
+            </article>
+
+            <!-- Edit View -->
+            <div id="editView" class="view-panel edit-view" style="display: none;">
+              <div id="editorContainer" class="editor-container"></div>
+            </div>
+
+            <!-- Split View -->
+            <div id="splitView" class="view-panel split-view" style="display: none;">
+              <div class="split-pane">
+                <div id="splitEditorContainer" class="editor-container"></div>
+              </div>
+              <div class="split-divider"></div>
+              <div class="split-pane">
+                <div id="splitPreview" class="rendered-markdown"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
     </div>
   </div>
 
-  <script src="renderer.js"></script>
+  <script type="module" src="components/FileTree.js"></script>
+  <script type="module" src="components/Backlinks.js"></script>
+  <script type="module" src="components/SearchPanel.js"></script>
+  <script type="module" src="renderer.js"></script>
 </body>
 </html>
