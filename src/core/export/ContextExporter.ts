@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { ContextExport, ContextFile } from '../../types';
+import { ContextExport, ContextFile, FileIndexEntry } from '../../types';
 import { BacklinkIndexer } from '../linking/BacklinkIndexer';
 
 export class ContextExporter {
